@@ -1,0 +1,203 @@
+---
+title: "Word_Cloud_Job_Compare"
+output: html_document
+date: "2023-09-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Need to import tm, SnowballC, wordcloud, and RcolorBrewer. If these are not installed, unhash the install commands. 
+```{r}
+#install.packages("tm")
+library("tm")
+#install.packages("SnowballC")
+library("SnowballC")
+#install.packages("wordcloud")
+library("wordcloud")
+#install.packages("RColorBrewer")
+library("RColorBrewer")
+```
+IMPORTING DATA
+Next step is to import the data. To do this, export your resume or CV to a .txt file. The following command file.choose() will give you the option to select a file from the directory. 
+```{r}
+text_CV <- readLines(file.choose())
+
+docs_CV <- Corpus(VectorSource(text_CV))
+
+inspect(docs_CV) #this will display the entire resume in the console or below in the markdown
+```
+Next you will want to also import the data relating to the job posting to which you are hoping to apply
+```{r}
+text_job <- readLines(file.choose())
+
+docs_job <- Corpus(VectorSource(text_job))
+
+inspect(docs_job)
+```
+```{r}
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+```
+
+Next we will create a corpus for both the resume and the job posting
+
+```{r}
+corpus_resume <- Corpus(VectorSource(docs_CV))
+corpus_job <- Corpus(VectorSource(docs_job))
+```
+
+The next step is preprocessing
+```{r}
+#for the resume
+corpus_resume <- tm_map(corpus_resume, content_transformer(tolower))
+corpus_resume <- tm_map(corpus_resume, removeNumbers)
+corpus_resume <- tm_map(corpus_resume, removePunctuation)
+corpus_resume <- tm_map(corpus_resume, removeWords, stopwords("english"))
+corpus_resume <- tm_map(corpus_resume, removeWords, c("blabla1", "blabla2"))
+corpus_resume <- tm_map(corpus_resume, stripWhitespace)
+
+#for the job posting
+corpus_job <- tm_map(corpus_job, content_transformer(tolower))
+corpus_job <- tm_map(corpus_job, removeNumbers)
+corpus_job <- tm_map(corpus_job, removePunctuation)
+corpus_job <- tm_map(corpus_job, removeWords, stopwords("english"))
+corpus_job <- tm_map(corpus_job, removeWords, c("blabla1", "blabla2"))
+corpus_job <- tm_map(corpus_job, stripWhitespace)
+```
+You will notice warnings for each of the above lines. These are not a concern because it is dropping aspects of the data that are not needed for analysis. 
+
+Next step in preprocessing is to create a Document Term Matrix and find frequency of terms and associations
+```{r}
+dtm_resume <- DocumentTermMatrix(corpus_resume)
+dtm_job <- DocumentTermMatrix(corpus_job)
+
+freq_terms_resume <- findFreqTerms(dtm_resume, lowfreq = 4)
+freq_terms_job <- findFreqTerms(dtm_job, lowfreq = 4)
+
+associations_resume <- findAssocs(dtm_resume, terms = "freedom", corlimit = 0.3)
+associations_job <- findAssocs(dtm_job, terms = "freedom", corlimit = 0.3)
+```
+
+Next step is to create a data frame for word frequency
+```{r}
+word_freq_resume <- data.frame(word = colnames(dtm_resume), freq = colSums(as.matrix(dtm_resume)))
+
+# Sort the word frequencies
+word_freq_resume <- word_freq_resume[order(word_freq_resume$freq, decreasing = TRUE), ]
+
+word_freq_job <- data.frame(word = colnames(dtm_job), freq = colSums(as.matrix(dtm_job)))
+
+word_freq_job <- word_freq_job[order(word_freq_job$freq, decreasing = TRUE), ]
+```
+Here you can view the data frames. This may be interesting and can also help with further preprocessing. For instance, I noticed that one of the most frequent words was "Jul" because most of my job transitions occured in July. This can provide insight into how to edit the txt in order to make it more meaningful in the analysis. 
+```{r}
+View(word_freq_resume)
+View(word_freq_job)
+```
+Instead of having to go throught he entire data frame, it can be helpful to at least have an idea of some of the most used words befroe moving on to the word cloud generation
+```{r}
+# Display the top 10 words by frequency. Unhash the second line to save to a csv
+SumText_resume <- head(word_freq_resume, 10)
+#write_csv(SumText_resume, "Resume_Word_Summary.csv")
+SumText_job <- head(word_freq_job, 10)
+#write_csv(SumText_job, "Job_Posting_Word_Summary.csv")
+
+# Optional display the top 20 words by frequency and save to a csv
+SumText_20_Resume <- head(word_freq_resume, 20)
+#write_csv(SumText_20_Resume, "Resume_Word_Summary_20.csv")
+SumText_20_Job <- head(word_freq_job, 20)
+#write_csv(SumText_20_Job, "Job_Posting_Word_Summary_20.csv")
+```
+Now we can create our word clouds. First we will create individual word clouds for both the job posting and our resume
+```{r}
+#For Resume
+wordcloud(words = word_freq_resume$word, freq = word_freq_resume$freq, min.freq = 1,
+          max.words = 200, random.order = FALSE, rot.per = 0.35,
+          colors = brewer.pal(8, "Dark2"), scale=c(3, 0.3))
+
+#For Job Posting
+wordcloud(words = word_freq_job$word, freq = word_freq_job$freq, min.freq = 1,
+          max.words = 200, random.order = FALSE, rot.per = 0.35,
+          colors = brewer.pal(8, "Dark2"), scale=c(2, 0.2))
+
+```
+You will need to play with the scale() in the plots to ensure that you are getting the right fit. This may give you many warning about not being able to fit words onto the plot. You will notice that the scale in the resume is different from the scale in the job posting because of this. This will of course differ case by case. 
+
+Next we will look at a bar plot to visualize our most used words along with the most used words in the job posting. The second plot is for 20 words if you would like to see the top 20 as opposed to the top 10. 
+```{r}
+#Resume
+barplot(word_freq_resume[1:10, "freq"], las = 2, names.arg = word_freq_resume[1:10, "word"],
+        col = "lightblue", main = "Most frequent words in resume",
+        ylab = "Word frequencies")
+
+#barplot(word_freq_resume[1:20, "freq"], las = 2, names.arg = word_freq_resume[1:20, "word"],
+#        col = "lightblue", main = "Most frequent words in resume",
+#        ylab = "Word frequencies")
+
+#Job Posting
+barplot(word_freq_job[1:10, "freq"], las = 2, names.arg = word_freq_job[1:10, "word"],
+        col = "lightblue", main = "Most frequent words in job posting",
+        ylab = "Word frequencies")
+
+#barplot(word_freq_job[1:20, "freq"], las = 2, names.arg = word_freq_job[1:20, "word"],
+#        col = "lightblue", main = "Most frequent words in job posting",
+#        ylab = "Word frequencies")
+```
+Next you will wanrt to analyze the similarities between the resume and the job posting. To do this, further preprocessing will be necessary. 
+```{r, results='asis'}
+
+library(stringr)
+
+# Remove HTML-like tags and patterns
+text_job <- str_replace_all(text_job, "<.*?>", "")
+text_CV <- gsub("<.*?>", "", text_CV)
+text_job <- gsub("<e1>", "", text_job)
+
+
+# Tokenization (same as before)
+tokens_resume <- unlist(strsplit(text_CV, "\\s+"))
+tokens_job <- unlist(strsplit(text_job, "\\s+"))
+
+# Remove empty tokens (NAs)
+tokens_resume <- tokens_resume[!is.na(tokens_resume) & tokens_resume != ""]
+tokens_job <- tokens_job[!is.na(tokens_job) & tokens_job != ""]
+```
+Then you may need to calculate Jaccard similarity
+```{r}
+jaccard_similarity <- length(intersect(tokens_resume, tokens_job)) / length(union(tokens_resume, tokens_job))
+```
+Now we can create a Venn Diagram comparing our resume to the job posting. The below will create a png of a venn diagram along with a csv of common words between job posting and resume. Ensure that you are looking at the csv to ensure that the similar words are terms that are important. 
+```{r}
+#install.packages("VennDiagram")
+library(VennDiagram)
+
+# Prepare sets for the Venn diagram
+set1 <- unique(tokens_resume)
+set2 <- unique(tokens_job)
+
+# Create the Venn diagram
+venn_data <- venn.diagram(
+  x = list(Resume = set1, "Job Posting" = set2),
+  category.names = c("Resume", "Job Posting"),
+  filename = NULL,
+  margin = 0.15 # Adjust margin for labels
+)
+
+# Display the Venn diagram in RStudio Viewer
+grid.draw(venn_data)
+
+# Save the Venn diagram to a PNG file
+png("venn_diagram.png", width = 800, height = 600)
+grid.draw(venn.plot)
+dev.off()
+
+# Save common terms to a CSV file
+common_terms <- intersect(set1, set2)
+common_terms_df <- data.frame(Terms = common_terms)
+write.csv(common_terms_df, file = "common_terms.csv", row.names = FALSE)
+
+```
+
+
+
