@@ -1,0 +1,66 @@
+---
+title: "Day 1: 100 Days of Coding"
+output: html_notebook
+---
+
+I asked ChatGPT to generate a 100 days of code challenge, alternating between using R and Python. 
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+Day 1:
+-----------------------------------------------------------------------------
+Project: Write an R script to generate random data and create a basic plot
+
+
+I will start with creating a dataframe of random data. I will use sample() to randomly sample from 1 to 1000 and will let a value be sampled more than once. I want to create a dataframe of 20 observations across two variables. 
+```{r}
+data <- data.frame(Var1 = sample(1:1000, size = 20, replace = TRUE), 
+                   Var2 = sample(1:1000, size = 20, replace = TRUE))
+```
+I wanted the data to have a large range with 20 observations in each variable. 
+
+I will now examine the data:
+```{r}
+head(data)
+summary(data)
+```
+Now, to do a simple scatter plot, using Base-R, to explore the data:
+```{r}
+plot(data)
+```
+Now i want to explore the distribution of the data using a historgram:
+```{r}
+library(ggplot2)
+ggplot(data, aes(Var1)) +
+  geom_histogram()
+
+ggplot(data, aes(Var2)) +
+  geom_histogram()
+```
+
+Something that would be interesting to try would be to standardize the data:
+```{r}
+data$Var1 <- scale(data$Var1)
+data$Var2 <- scale(data$Var2)
+summary(data)
+```
+I will now look at various plots for this data, starting with a scatter plot:
+
+```{r}
+ggplot(data, aes(Var1, Var2)) +
+  geom_point()
+```
+Density plot for Var1
+```{r}
+ggplot(data, aes(Var1))+
+  geom_density()
+```
+Density plot for Var2
+```{r}
+ggplot(data, aes(Var2)) +
+  geom_density()
+```
+This was a rather simple and easy exercise that incorporates: 1)generating random numbers for data and 2) plotting the data
+
+This was a great warm-up to continue with the 100 days of coding. 
+
